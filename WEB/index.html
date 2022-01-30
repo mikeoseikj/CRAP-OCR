@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Optical Character Recognition</title>
+	<link rel="icon" type="image/jpg" href="/images/favicon.jpg">
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.0.0-rc.0-next-42c30e8b1-20220104/umd/react.production.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/17.0.2/umd/react-dom.production.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/react-router-dom/5.3.0/react-router-dom.min.js"></script>
+
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+	<link  rel="stylesheet" type="text/css" href="stylesheets/index.css" />
+
+</head>
+<body>
+	<div id="root"></div>
+	<script  type="text/babel">
+
+		
+		const {BrowserRouter, Route, NavLink} = window.ReactRouterDOM;
+		class Home extends React.Component{
+			render(){
+				return(
+					<div>
+						<div className="home-page">
+							<div className="image-text">Software For Recognition of Text From Images</div>
+						</div>
+						<img className="glass-image" src="images/glass.jpg" />
+						<div className="plate">
+							<emp className="exp-project">EXPERIMENTAL PROJECT </emp><hr /><br />
+							<strong className="plate-text" >OCR FOR SCANNING DOCUMENTS</strong>
+							<br /><br /><br />
+							<div className="readmore"><a href="/scan">start</a></div> 
+						</div>
+					</div>
+				);
+			}
+		}
+
+
+
+		class ProgressBar extends React.Component{
+
+			render(){
+
+				var progressBarStyle ={
+					width: "100%",
+					height: "30px",
+					backgroundColor: "#e0e0e0",
+					borderRadius: "4px",
+					visibility: this.props.displayMode
+				};
+
+				var progressGaugeStyle ={
+					width: this.props.percentage,
+					height: "30px",
+					color: "#ffffff",
+					backgroundColor: "#000000",
+					textAlign: "center",
+					overflow: "hidden",
+					borderRadius: "4px",
+					visibility: this.props.displayMode
+				};
+
+				var progressBarLabelStyle ={
+					float: "left",
+					visibility: this.props.displayMode
+				};
+
+				var containerStyle ={
+					float: "left",
+					marginTop: "40px", 
+					width: "100%", 
+					visibility: this.props.displayMode
+				};
+	
+				return(
+
+					<div style={containerStyle}>
+						<label style={progressBarLabelStyle}>{this.props.label}</label><br />
+						<div id={this.props.pId} style={progressBarStyle} >
+ 							<div  id={this.props.gId}style={progressGaugeStyle}>
+ 								<p style={{marginTop: "8px"}}>{this.props.percentage}</p>
+ 							</div>
+						</div>
+					</div>
+				);
+			}
+		}
+
+		class Scan extends React.Component{
+			constructor(props){
+				super(props);
+				this.state ={
+					barDisplayMode: "hidden",
+					barPercentage: 0,
+					barLabel: ""
+				}
+
+				this.uploadFile = this.uploadFile.bind(this);
+			}
+		
+			uploadFile(e){
+
+				document.getElementById("gBar").style.backgroundColor = "#000000";
+				var files = document.getElementById("select-file").files;
+				if(files.length == 0)
+					return;
+				e.preventDefault();
+				document.getElementById("image-details").style.visibility = "hidden";
+	
+				this.setState({
+					OCRData: "",
+					barDisplayMode: "visible",
+					barPercentage: 0,
+					barLabel: "uploading image..."
+				});
+
+				var formData = new FormData();
+				formData.append("file", files[0]);
+				var reactThis = this;
+
+				var xhttp = new XMLHttpRequest();
+				xhttp.open("POST", "/scripts/upload.php", true);
+				const pBarWidth = document.getElementById("pBar").offsetWidth;
+				xhttp.upload.addEventListener("progress", function(e) {
+
+					if(e.lengthComputable){
+						const val = pBarWidth*(e.loaded / e.total);
+						reactThis.setState({
+							barPercentage: parseInt(((val/pBarWidth)*100))+"%"
+					
+						});
+					}
+
+				}, false);
+
+				function errorHandler(e){
+					reactThis.setState({
+							barLabel: e.type+"!"
+						});
+						document.getElementById("gBar").style.backgroundColor = "#ff0000";
+				}
+				xhttp.upload.addEventListener("error", errorHandler, false);
+				xhttp.upload.addEventListener("abort", errorHandler, false);
+				xhttp.upload.addEventListener("timeout", errorHandler, false);
+				xhttp.upload.addEventListener("load", function(){
+
+					reactThis.setState({
+						barLabel: "Upload Done - Scanning Image..."
+					});
+				}, false);
+
+				xhttp.addEventListener("load", function(){
+
+					const response = xhttp.responseText;
+					if(response.startsWith("OCR_HEADER:"))
+					{
+						reactThis.setState({
+							barLabel: "Done!"
+						});
+
+						const ocr_header = response.substring(response.indexOf("OCR_HEADER:",), response.indexOf("OCR_CONTENT:")).replace("OCR_HEADER:", "");
+						const ocr_content = response.substring(response.indexOf("OCR_CONTENT:"), response.length).replace("OCR_CONTENT:", "");
+						
+						document.getElementById("image-details").innerHTML = ocr_header;
+						document.getElementById("image-details").style.visibility = "visible";
+						document.getElementById("textarea").textContent = ocr_content;
+					}else{
+						reactThis.setState({
+							barLabel: "OCR Failed!"
+						});
+
+						document.getElementById("gBar").style.backgroundColor = "#ff0000";
+						const errDialogBox = document.getElementById("error-msg");
+						errDialogBox.style.visibility = "visible";
+						errDialogBox.getElementsByClassName("error-msg-content")[0].textContent = response;
+					}
+
+				}, false);
+
+				xhttp.send(formData);
+
+			}
+
+			downloadFile(){
+				
+				const data = document.getElementById("textarea").value;
+				if(!data)
+					return;
+
+				const link = document.createElement("a");
+  				link.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(data));
+  				link.setAttribute("download", "OCR.txt");
+  				link.style.display = "none";
+  				document.body.appendChild(link);
+  				link.click();
+  				document.body.removeChild(link);
+			}
+
+			render(){
+
+				return(
+				
+					<div className="row">
+						<div className="column">
+							<div className="card">
+								<strong className="scan-page-icon"><i class="fas fa-file-upload"></i></strong><br />
+								<div className="file-upload">
+									<form id="upload">
+										<fieldset style={{borderStyle: "dotted"}}>
+											<legend>IMAGE TO BE SCANNED</legend>
+											<input id="select-file" name="file" type="file" className="select-file"  required onClick={() =>{
+												this.setState({
+													barDisplayMode: "hidden"
+												});
+												document.getElementById("image-details").style.visibility = "hidden";
+											}}/><br /><br />
+											<button type="submit" onClick={this.uploadFile}>Upload</button>
+										</fieldset>
+									</form>
+								</div>
+								
+								{/*this is a dialog box to display error messages received from the server*/}
+								<div id="error-msg">
+									<button onClick={()=>{
+										document.getElementById("error-msg").style.visibility = "hidden";
+									}}>close</button>
+									<br /><br />
+									<p style={{textAlign: "center"}} className="error-msg-content"></p>
+								</div> 
+
+								<ProgressBar pId="pBar" gId="gBar" displayMode={this.state.barDisplayMode}  percentage={this.state.barPercentage} label={this.state.barLabel} />
+								<h3 id="image-details"></h3>
+							</div>		
+						</div>
+
+						<div className="column">
+							<div className="card">
+								<textarea id="textarea" placeholder="OCR RECOGNIZED EDITABLE TEXT WOULD APPEAR HERE..."></textarea>
+								<br />
+								<button className="download-button" onClick={this.downloadFile}>DOWNLOAD</button>
+							</div>
+						</div>
+					</div> 
+				);
+			}
+		}
+
+		class About extends React.Component{
+			render(){
+				return(
+					<div className="about-page">
+						This program OCR does scanning through the following processes: <br />
+						<ul>
+							<li>Skew detection and rotation image</li>
+							<li>Thresholding/Binarization of image</li>
+							<li>Joined character separation and extraction of individual characters from image</li>
+							<li>Performing character recognition of extracted characters</li>
+							<li>Spell checking recognized words</li>
+						</ul>
+					</div>
+				);
+			}
+		}
+
+		class App extends React.Component{
+			render(){
+				return(
+					<div>
+						<div className = "header">
+							<strong className="banner">CRAP-OCR</strong>
+							<ul className = "navbar">
+								<li><NavLink exact to="/" activeClassName="active"><i class="fa fa-home"></i>  Home</NavLink></li>
+								<li><NavLink to="/scan"   activeClassName="active"><i class="fa fa-search"></i>  Scan</NavLink></li>
+								<li><NavLink to="/about"  activeClassName="active"><i class="fa fa-info"></i> About</NavLink></li>
+							</ul>
+						</div>
+						<div className="content">
+							{this.props.children}
+						</div>
+						<div className="footer"></div>
+					</div>
+				);
+			}
+		}		
+
+		ReactDOM.render(
+			<BrowserRouter>
+				<App>
+					<Route exact path="/"  component={Home}   />
+					<Route path="/scan"  component={Scan} />
+					<Route path="/about"   component={About}  /> 
+				</App>
+			</BrowserRouter>, 
+			document.getElementById("root")
+		); 
+	</script>
+
+</body>
+</html>

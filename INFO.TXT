@@ -1,0 +1,72 @@
+CRAP-OCR is a simple Optical Character Recognition(OCR) program I wrote from scratch (all image processing algorithms - No third partly libraries) for fun and experimentation reasons. It uses a simple neural network which isn't robust due to "unavailability" of training data. It was trained with a small amount of computer generated images(less than 10,000). Also with the less than 10,000 images, most of the images for each character look similar (if not the same). For this reason, noise is introduced and template matching is used in conjunction with the neural network to "increase" the performance and accuracy of the recognition. A simple spell checker is also applied to get better results.
+
+The program accepts PGM images only. This means that any image in a different format(BMP, JPEG etc) has to be converted to the PGM format before passing it to any version of the program. There a two versions of the program which are "cmd_ocr" and "web_ocr". Both are compiled programs. The "web_ocr" is used by the web PHP script(with a ReactJS frontend) and the "cmd_ocr" is to be used directly in the terminal manually. With the ReactJS web interface being a major part of this project, any non-PGM image uploaded in the browser is converted by the PHP Imagick library to PGM format before passing it to web_ocr via the PHP "shell_execute" function. This doesn't limit web_ocr to PGM images in the way cmd_ocr is limited. 
+
+Now there is a question. If I used Imagick for the conversion of images in the Web Server code then why didn't I use Imagick for the image processing(thresholding, rotation etc)? Wouldn't it have been easier, efficient and better? Answer: I did it for the fun.
+
+===============================
+STAGES IN PROGRAM OPERATION         
+===============================
+- Thresholding and skew detection
+- Character extration and joined character separation
+- Recognition of characters
+- Spell checking
+
+
+
+THRESHOLDING
+-------------
+Otsu thresholding algorithm is used for the thresholding. Skewness of a document is detected with a horizontal projection method and then the angle is calculated in the clockwise direction. If the document is skewed, it is rotated to the correct angle.
+
+
+CHRACTER EXTRACTION
+--------------------
+The extraction here is done by finding farmost/edgemost pixels of enclosed black regions/characters by using a recursive algorithm. This approach
+is efficient and accurate but it has a serious disadvantage ie. if white spots(lines/pixels) can be traced across the character from edge to edge
+in the unextracted character in the document then those separated part(s) in the character in question won't be treated as part(s) of the character 
+rather they will be treated as separate individual character(s) during extraction. Also some letters and symbols are represented by two ore more 
+regions. Eg: i, !, = etc. Identification methods for these "multi-region" characters are hardcoded.
+
+
+JOINED CHARACTER SEPARATION
+----------------------------
+Every black region is regarded as a potential character. The first two potential split positions in a region made of connected characters 
+(region is treated as a single character if there is no potential split position) are found by using a histogram. If there is only one split
+position(ie: no second split position), the end of the region is taken as the second split position. These two split positions identified are 
+used to create two sub-images out the region and character recognitions are done on each of the sub-images. Also, a third recognition is done 
+on an image produced by joining both sub-images. Then, the 'euclidean' distance of the third recognition is compared  with the average of the 
+distances of sub-images (first two recognitions) and if third recognition has a smaller distance, the split is not taken but if the average of 
+the distances of the first two sub-images is smaller, the split is taken. This process is repeated on the black region till no split positions
+are left.
+
+
+RECOGNITION OF CHARACTERS
+-------------------------
+As stated earlier, recognition is done with a feedforward backpropagation neural network supported by template matching because of insufficient training of the network.
+
+
+SPELL CHECKING
+---------------
+A very simple algorithm that gave 70% percent accuracy during testing is used. The accuracy may be subjective.
+
+=========================
+SETTING UP THE PROGRAM
+=========================
+Tools needed for compilation: gcc, rm, cp and make. 
+PHP compiler with the Imagick library installed is required to use the web interface.
+
+To compile
+-----------
+- Change directory to the "OCR" subfolder in the "CRAP-OCR"
+- Then type "make" in the terminal to build the project.
+
+
+To deploy
+----------
+Option 1: 
+	Use the command line tool "cmd_ocr" in the "OCR" subfolder.
+	Usage: cmd_ocr <PGM image file>
+
+Option 2: 
+	Start a PHP server and set the server root directory to the "WEB" subfolder. Now you can access it via a web browser. PHP's in-built server is sufficient and can be used.
+	Note: Since ReactJS is used for the frontend, internet access is required for the browser to download the required javascrpt files.
