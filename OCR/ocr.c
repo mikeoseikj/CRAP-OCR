@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 #include <ctype.h>
 #include <limits.h>
 
@@ -594,6 +593,22 @@ char *template_recognition(glyph_t *extracts, int average_width)
 
 
 
+static int max(float *buf, int len)
+{
+	int index = 0;
+	float val = buf[0];
+	for(int i = 1; i < len; i++)
+	{
+		if(buf[i] > val)
+		{
+			val = buf[i];
+			index = i;
+		}
+	}
+	return index;
+}
+
+
 char *neural_network_recognition(glyph_t *extracts, int average_width)
 {
 	glyph_t *glyph = extracts;
@@ -614,7 +629,7 @@ char *neural_network_recognition(glyph_t *extracts, int average_width)
 		return NULL;
 	}
 
-	int space, index = 0, size = 0;
+	int space, index, size = 0;
 	int topmost_height, downmost_height, topmost_width, downmost_width;
 	char character, *output = NULL;
 
@@ -626,12 +641,7 @@ char *neural_network_recognition(glyph_t *extracts, int average_width)
 		fbp_set_run_inputs(network, nn_input);
 		fbp_forward_propagate(network);
        
-		for(int i = 0; i < network->num_output_nodes; i++)
-		{
-			int val = (int)round(network->output_layer.outputs[i]); 
-			if(val == 1)
-				index = i;
-		}
+		index = max(network->output_layer.outputs, network->num_output_nodes);
 		character = mapping[index];
 		
 		if(glyph->next && glyph->line == glyph->next->line && cols_in_common(glyph, glyph->next))

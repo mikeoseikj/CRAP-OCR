@@ -50,7 +50,7 @@ void image_to_nn_input(float *output, image_t *image)
 	{
 		int k = i*image->width;
 		for(int j = 0; j < image->width; j++)
-			output[k+j] = (image->pixels[i][j] == BLACK_PIXEL)? 1.0 : -1;
+			output[k+j] = (image->pixels[i][j] == BLACK_PIXEL)? 1.0 : 0.0;
 	}
 }
 
