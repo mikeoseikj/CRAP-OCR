@@ -77,6 +77,22 @@ void pgm_image_free(image_t *image)
 }
 
 
+static void skip_comments(FILE *stream)
+{
+	char c;
+	fscanf(stream, " %c", &c);
+	if(c == '#')
+	{
+		while(fgetc(stream) != '\n');
+		skip_comments(stream);
+	}
+	else
+	{
+		ungetc(c, stream);
+	}
+}
+
+
 int pgm_image_read(char *filename, image_t **image)
 {
 	FILE *stream = fopen(filename, "rb");
@@ -105,7 +121,12 @@ int pgm_image_read(char *filename, image_t **image)
 	if(strcmp(buf, "P5") == 0)
 		fmt = "%c";
 
-	fscanf(stream, "%d%d%d", &((*image)->width), &((*image)->height), &((*image)->max_color));
+	skip_comments(stream);
+	fscanf(stream, "%d%d", &((*image)->width), &((*image)->height));
+	skip_comments(stream);
+	fscanf(stream, "%d", &((*image)->max_color));
+	skip_comments(stream);
+
 	if(ferror(stream))
 		goto error;
 	int width = (*image)->width, height = (*image)->height;
